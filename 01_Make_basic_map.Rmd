@@ -1,0 +1,309 @@
+---
+title: "R Notebook"
+output:
+  html_notebook: default
+  github_document:
+    toc: true
+    toc_depth: 2
+---
+
+
+```{r}
+library(ggplot2)
+library(ggmap)
+library(readxl)
+library(cowplot)
+```
+
+# Read station data with popsitions of each station
+
+```{r}
+data_positions <- read_excel("Data/STAR-WALK sites.xlsx")
+```
+
+## Our first plot
+This uses the basic plot() function of R. It tells R to plot the numbers of 'lat' on the y axis, the numbers of 'long' on the x axis, and these numbers R can find in the data set we have called 'data_positions' 
+```{r}
+plot(lat~long, data_positions)
+```
+
+## Another test plot
+We use `color = lake` inside the aes() parathesis to make on color per lake.
+```{r}
+ggplot(data_positions, aes(long, lat, color = lake)) +
+  geom_point()
+```
+
+## Yet another test plot
+```{r}
+ggplot(data_positions, aes(long, lat, color = lake)) +
+  geom_point() +
+  facet_wrap(~lake, scales = "free")
+```
+
+
+# Example of one lake plot (Lake Lura)
+## Create background map
+```{r}
+# Make 'google' map
+# mydata <- subset(data_positions, lake == "Biogradsko")
+# map <- qmap(location = c(19.5983, 42.898), zoom=16)
+mydata <- subset(data_positions, lake == "Lura")
+mymap <- qmap(location = c(20.19387, 41.78988), zoom=16)
+mymap
+```
+
+## Show station positions
+### Just positions
+```{r}
+# Make 'google' map
+mymap + 
+  geom_point(data = mydata, aes(Elongitude, Nlatitude), color = "black")
+```
+
+### Shown station names also
+```{r}
+# Make 'google' map
+mymap + 
+  geom_point(data = mydata, aes(Elongitude, Nlatitude), color = "black") +
+  geom_text(data = mydata, aes(x = Elongitude + 0.0003, y = Nlatitude, label=site), hjust = "left", color = "black")
+```
+
+## Plot chemistry
+
+### Get chemistry data into R's memory
+The data are in an excel file, so we use the command 'read_excel' to read the data into R's memory.  Note that  
+ + `skip = 2` means that we skip the two first lines of the Excel file (we want the variable names to be in our row number 1)  
+ + `na = "n.d."` means that the cells with no data are marked "n.d.". Otherwise R will think this is some kind of "data". 
+```{r}
+data_chem <- read_excel("Data/summary of most important chemistry results.xlsx", skip = 2, na = c("","n.d."))
+```
+
+### Add columns for longitude and latitude to the data
+```{r}
+data_chem <- merge(data_chem, data_positions, by = c("lake","site"), all.x = TRUE, all.y = FALSE)
+```
+
+### Plot (first try)
+```{r}
+mymap + 
+  geom_point(data = data_chem, aes(Elongitude, Nlatitude, color = water_TP_autumn))
+```
+
+### Plot (second try)
+```{r}
+mymap + 
+  geom_point(data = data_chem, aes(Elongitude, Nlatitude, color = water_TP_autumn), size = 5)
+```
+
+### Plot (color scale based on all lakes)
+'data_chem' has data for _all_ lakes, and the colours scale is adapted to that. But because 'mymap' sets the limits of the map we only see the points around this lake - the other lakes are outside the picture.   
+```{r}
+mymap + 
+  geom_point(data = data_chem, aes(Elongitude, Nlatitude, color = water_TP_autumn), size = 5) +
+  scale_color_distiller(palette = "RdYlGn")
+```
+
+### Plot (color scale based on this lake only)
+To make the colour scale adjust to only the lake we show, we have to make a new data set (we call it 'data_chem_mylake') for only the data of this lake. 
+```{r}
+data_chem_mylake <- subset(data_chem, lake == "Lura")
+mymap + 
+  geom_point(data = data_chem_mylake, aes(Elongitude, Nlatitude, color = water_TP_autumn), size = 5) +
+  scale_color_distiller(palette = "RdYlGn")
+```
+
+### More things we can do to improve our plot
+#### Add a line around the points
+We do this by using 'shape = 21'.
+ + Note that we have to change 'color' and 'scale_color_distiller' into 'fill' and 'scale_fill_distiller', because for this shape, 'color' is only the color of the thin line around the circle.
+```{r}
+mymap + 
+  geom_point(data = data_chem_mylake, aes(Elongitude, Nlatitude, fill = water_TP_autumn), shape = 21, size = 5) +
+  scale_fill_distiller(palette = "RdYlGn")
+```
+
+#### Change shape
+Here we change 'shape = 21' to 'shape = 22'. Run the command `?points` to see the different shapes we can use. 
+```{r}
+mymap + 
+  geom_point(data = data_chem_mylake, aes(Elongitude, Nlatitude, fill = water_TP_autumn), shape = 22, size = 5) +
+  scale_fill_distiller(palette = "RdYlGn")
+```
+#### Change title of the legend 
+We do this by adding the title just after the first parenthesis in the scale definition `scale_fill_distiller`.  
+Note that `\p` means "line shift", so `Total water P\nAutumn` prints "Total water", line shift,  "Autumn". 
+```{r}
+mymap + 
+  geom_point(data = data_chem_mylake, aes(Elongitude, Nlatitude, fill = water_TP_autumn), shape = 22, size = 5) +
+  scale_fill_distiller("Total water P\nAutumn", palette = "RdYlGn")
+```
+#### Add plot title 
+```{r}
+mymap + 
+  geom_point(data = data_chem_mylake, aes(Elongitude, Nlatitude, fill = water_TP_autumn), shape = 22, size = 5) +
+  scale_fill_distiller("Total water P\nAutumn", palette = "RdYlGn") + 
+  labs(title = "Lake Lura, total phosphorus")
+```
+
+
+#### Also use size 
+ + Added `size = water_TP_autumn` _inside_ the aes() paranthesis
+ + Remember to delete the `size = 5` _outside_ the aes() paranthesis
+ + We can also show a different variable using size 
+```{r}
+mymap + 
+  geom_point(data = data_chem_mylake, aes(Elongitude, Nlatitude, fill = water_TP_autumn, size = water_TP_autumn), shape = 22) +
+  scale_fill_distiller("Total water P\nAutumn", palette = "RdYlGn")
+```
+
+#### Plot a different variable (sediment total P)
+ + Changed `water_TP_autumn` to `sed_TP_autumn`
+ + Remember to also change any titles (here, legend title)
+```{r}
+mymap + 
+  geom_point(data = data_chem_mylake, aes(Elongitude, Nlatitude, fill = sed_TP_autumn), shape = 22, size = 5) +
+  scale_fill_distiller("Total sediment P\nAutumn", palette = "RdYlGn")
+```
+
+
+
+## Plot diatom data
+
+### Get diatom data into R's memory
+```{r}
+data_diatoms <- read_excel("Data/summary of the most important diatom results.xlsx", na = c("","n.d."))
+```
+
+### Add columns for longitude and latitude to the data
+```{r}
+data_diatoms <- merge(data_diatoms, data_positions, by = c("lake","site"), all.x = TRUE, all.y = FALSE)
+```
+
+### Plot IPS as colours on map
+```{r}
+mymap + 
+  geom_point(data = data_diatoms, aes(Elongitude, Nlatitude, color = IPS), size = 5) +
+  scale_color_distiller(palette = "RdYlGn")
+```
+
+## Plot macroinvertebrate data
+
+### Get macroinvertebrate data into R's memory
+```{r}
+data_invert <- read_excel("Data/summary of most important macroinvertebrate data.xlsx", sheet = "indices_traits", skip = 1, na = c("","n.d."))
+```
+
+### Add columns for longitude and latitude to the data
+```{r}
+data_invert <- merge(data_invert, data_positions, by = c("lake","site"), all.x = TRUE, all.y = FALSE)
+```
+
+### Plot IPS as colours on map
+```{r}
+mymap + 
+  geom_point(data = data_invert, aes(Elongitude, Nlatitude, color = ASPT), size = 5) +
+  scale_color_distiller(palette = "RdYlGn")
+```
+
+## Plot macrophyte data
+
+### Get macrophyte data into R's memory
+```{r}
+data_macrophyte <- read_excel("Data/summary of most important macrophyte results.xlsx", skip = 1, na = c("","n.d."))
+```
+
+### Add columns for longitude and latitude to the data
+```{r}
+data_macrophyte <- merge(data_macrophyte, data_positions, by = c("lake","site"), all.x = TRUE, all.y = FALSE)
+```
+
+### Plot IPS as colours on map
+```{r}
+mymap + 
+  geom_point(data = data_macrophyte, aes(Elongitude, Nlatitude, color = MI), size = 5) +
+  scale_color_distiller(palette = "RdYlGn")
+```
+
+# Make plot of all lakes
+## Mean position of each lake
+```{r}
+data_positions %>%
+  group_by(lake) %>%
+  summarise(long = mean(Elongitude), lat = mean(Nlatitude)) %>%
+  as.data.frame()
+```
+
+## Create background maps
+```{r}
+mymap1 <- qmap(location = c(19.5983, 42.898), zoom=16)
+mymap2 <- qmap(location = c(19.09116, 43.14598), zoom=16)
+mymap3 <- qmap(location = c(20.19387, 41.78988), zoom=16)
+mymap4 <- qmap(location = c(20.73327, 41.03089), zoom=11)
+mymap5 <- qmap(location = c(20.95873, 40.90712), zoom=11)
+mymap6 <- qmap(location = c(20.39183, 44.78354), zoom=14)
+```
+
+## Create a list of maps and arrange them
+```{r, fig.width = 8, fig.height = 12}
+map_list <- list(mymap1, mymap2, mymap3, mymap4, mymap5, mymap6)
+plot_grid(plotlist = map_list, ncol = 2)
+```
+
+
+## Create a list of maps, add points, and arrange them
+```{r}
+map_list <- list(mymap1, mymap2, mymap3, mymap4, mymap5, mymap6)
+for (i in 1:6){
+  map_list[[i]] <- map_list[[i]] +
+    geom_point(data = data_chem, aes(Elongitude, Nlatitude, fill = water_TP_autumn), pch = 21, size = 5) +
+    scale_fill_distiller("Total water P\nAutumn", palette = "RdYlGn")
+}
+```
+
+```{r, fig.width = 10, fig.height = 12, warning=FALSE}
+plot_grid(plotlist = map_list, ncol = 2)
+```
+
+
+
+
+
+# Plot pie diagrams on map
+```{r}
+library(scatterpie)
+
+d <- mydata
+n <- nrow(d)
+d$region <- factor(1:n)
+d$A <- abs(rnorm(n, sd=1))
+d$B <- abs(rnorm(n, sd=2))
+d$C <- abs(rnorm(n, sd=3))
+d$D <- abs(rnorm(n, sd=4))
+d$radius <- abs(rnorm(n)*0.0002)
+```
+
+
+
+```{r}
+ggplot() + geom_scatterpie(aes(x=Elongitude, y=Nlatitude, group=region), data=d, cols=LETTERS[1:4])
+```
+```{r}
+ggplot() + geom_scatterpie(aes(x=Elongitude, y=Nlatitude, group=region, r = radius), data=d, cols=LETTERS[1:4])
+```
+
+```{r}
+mymap + geom_scatterpie(aes(x=Elongitude, y=Nlatitude, group=region), data=d, cols=LETTERS[1:4])
+```
+```{r}
+mymap + geom_scatterpie(aes(x=Elongitude, y=Nlatitude, group=region, r = radius), data=d, cols=LETTERS[1:4])
+```
+
+```{r}
+
+```
+
+
+
+
+
