@@ -1,0 +1,70 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+Test scatterpie
+https://cran.r-project.org/web/packages/scatterpie/
+https://cran.r-project.org/web/packages/scatterpie/vignettes/scatterpie.html 
+
+
+```{r}
+library(ggplot2)
+library(ggmap)
+library(readxl)
+library(dplyr)
+library(cowplot)
+library(scatterpie)
+```
+
+
+```{r}
+data_positions <- read_excel("Data/STAR-WALK sites.xlsx")
+```
+
+# Plot pie diagrams on map
+```{r}
+d <- data_positions %>% filter(lake == "Lura") %>% select(-c(latitude,longitude))
+n <- nrow(d)
+d$region <- factor(1:n)
+d$A <- abs(rnorm(n, sd=1))
+d$B <- abs(rnorm(n, sd=2))
+d$C <- abs(rnorm(n, sd=3))
+d$D <- abs(rnorm(n, sd=4))
+d$Sum <- with(d, A+B+C+D)
+d$radius <- d$Sum*0.0001
+```
+
+```{r}
+ggplot() + 
+  geom_scatterpie(aes(x=Elongitude, y=Nlatitude, group=region), data=d, cols=LETTERS[1:4]) +
+  coord_fixed()
+```
+
+```{r}
+ggplot() + 
+  geom_scatterpie(aes(x=Elongitude, y=Nlatitude, group=region, r = radius), data=d, cols=LETTERS[1:4]) +
+  coord_fixed()
+```
+
+## Plot on map
+This creates a background map from Google that 
+```{r, warning=FALSE}
+mymap <- qmap(location = c(20.19387, 41.78988), zoom=16)
+```
+
+```{r}
+mymap +
+  geom_scatterpie(aes(x=Elongitude, y=Nlatitude, group=region, r = radius), data=d, cols=LETTERS[1:4]) +
+  coord_fixed(1.7)
+```
+```{r}
+mymap +
+  geom_scatterpie(aes(x=Elongitude, y=Nlatitude, group=region, r = radius), data=d, cols=LETTERS[1:4]) +
+  coord_quickmap()
+```
+
+
+
+
+

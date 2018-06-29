@@ -1,0 +1,20 @@
+---
+title: "Make scatter plots and bar plots"
+output: html_notebook
+---
+
+## Plot chemistry
+
+### Get chemistry data into R's memory
+The data are in an excel file, so we use the command 'read_excel' to read the data into R's memory.  Note that  
+ + `skip = 2` means that we skip the two first lines of the Excel file (we want the variable names to be in our row number 1)  
+ + `na = "n.d."` means that the cells with no data are marked "n.d.". Otherwise R will think this is some kind of "data". 
+```{r}
+data_chem <- read_excel("Data/summary of most important chemistry results.xlsx", skip = 2, na = c("","n.d."))
+```
+
+## Plot using 'base R'
+This uses the basic plot() function of R. It tells R to plot the numbers of 'lat' on the y axis, the numbers of 'long' on the x axis, and these numbers R can find in the data set we have called 'data_positions' 
+```{r}
+
+```

@@ -1,6 +1,10 @@
-library(ggplot2)
+#
+# Read 'STAR-WALK sites original.xlsx', extract decimal longitude/latitude and write to csv file '01_STAR-WALK sites.csv'
+# Decimal longitude/latitude from this file was used to create the Elongitude, Nlatitude values in'STAR-WALK sites.xlsx', 
+#   which becomes our new source file to use for script 01
+# 
+
 library(purrr)
-library(ggmap)
 library(readxl)
 
 data_positions <- read_excel("Data/STAR-WALK sites original.xlsx")
@@ -43,3 +47,18 @@ data_positions$Nlatitude <- lat
 write.csv2(data_positions, "Data/01_STAR-WALK sites.csv", row.names = FALSE, quote = FALSE)
 
 # Afterwards we open this file in Excel and copy the correct Elongitude, Nlatitude values back to 'STAR-WALK sites.xlsx', which becomes our new source file
+
+#
+# Test plots
+#
+
+# Test plot 1
+library(ggplot2)
+ggplot(data_positions, aes(Elongitude, Nlatitude, color = lake)) +
+  geom_point() +
+  coord_fixed(1.7)
+
+# Test plot 2
+ggplot(data_positions, aes(Elongitude, Nlatitude, color = lake)) +
+  geom_point() +
+  coord_fixed(1.7)
