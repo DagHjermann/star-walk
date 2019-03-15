@@ -354,3 +354,41 @@ for (i in 1:6){
 ```{r, fig.width = 8, fig.height = 12, warning=FALSE}
 plot_grid(plotlist = map_list, ncol = 2)
 ```
+
+<b>
+
+## As the previous plot but include just  a common legend for all lakes
+ + Inside `scale_fill_distiller`, include `guide = FALSE` to make plots without legend
+ + Make one plot (`plot_with_legend`) just for "picking out" the legend using get_legend . Here, using the data for lake no. 1, but that doesn't matter.
+
+```{r, warning=FALSE}
+# Followind the approach in
+# https://stackoverflow.com/a/46848576/1734247
+map_list <- list(mymap1, mymap2, mymap3, mymap4, mymap5, mymap6)
+lakes <- c("Crno","Biogradsko","Sava","Lura","Ohrid","Prespa")
+total_range <- range(data_chem$water_TP_autumn, na.rm = TRUE)
+for (i in 1:6){
+  map_list[[i]] <- map_list[[i]] +
+    geom_point(data = subset(data_chem, lake == lakes[i]), aes(Elongitude, Nlatitude, fill = water_TP_autumn), pch = 21, size = 5) +
+    scale_fill_distiller("Total water P\nAutumn", palette = "RdYlGn", limits = total_range, guide = FALSE)
+}
+
+# To be used just for "picking out" the legend using get_legend
+plot_with_legend <-  ggplot() +
+  geom_point(data = subset(data_chem, lake == lakes[1]), aes(Elongitude, Nlatitude, fill = water_TP_autumn), pch = 21, size = 5) +
+  scale_fill_distiller("Total water P\nAutumn", palette = "RdYlGn", limits = total_range) +
+  theme(legend.position = "bottom", legend.key.width = unit(2, "cm"))
+```
+
+<b>
+
+### Plot this new list of maps
+```{r, fig.width = 8, fig.height = 12, warning=FALSE}
+plot_grid(
+  plot_grid(plotlist = map_list, ncol = 2),
+  get_legend(plot_with_legend + scale_shape(guide = FALSE) + theme(legend.position = "bottom")),
+   ncol=1, rel_heights=c(.85, .15)
+  )
+```
+
+
