@@ -1,0 +1,547 @@
+---
+title: "Make maps "
+output:
+  html_document:
+    keep_md: true
+    toc: true
+    toc_depth: 2
+    df_print: paged
+---
+
+We need to load several libraries in order to run this code. Each library contain several functions; e.g., the **ggplot2** library contains the `ggplot()` function for plotting, and **readxl** contains the `read_excel()` function for reading Excel files.
+```{r, result=FALSE}
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(ggmap))
+suppressPackageStartupMessages(library(readxl))
+suppressPackageStartupMessages(library(cowplot))
+```
+
+# Example of one lake plot (Lake Lura)
+
+## Create background map
+This creates a background map from Google that 
+```{r, warning=FALSE}
+mymap <- qmap(location = c(20.19387, 41.78988), zoom=16)
+```
+
+<b>
+
+### Look at background map
+To look at the map, just write the name you gave to it:
+```{r}
+mymap
+```
+
+<b>
+
+## Add station positions to map
+
+### Get data set with positions of each station
+The data are in an excel file, so we use the command 'read_excel' to read the data into R's memory.
+```{r}
+data_positions <- read_excel("Data/STAR-WALK sites.xlsx")
+```
+
+<b>
+### Plot positions
+```{r}
+# Make 'google' map
+mymap + 
+  geom_point(data = data_positions, aes(Elongitude, Nlatitude), color = "black")
+```
+
+<b>
+
+### Plot posisions and station names
+
+```{r, warning=FALSE}
+# Make 'google' map
+mymap + 
+  geom_point(data = data_positions, aes(Elongitude, Nlatitude), color = "black") +
+  geom_text(data = data_positions, aes(x = Elongitude + 0.0003, y = Nlatitude, label=site), hjust = "left", color = "black")
+```
+
+<b>
+
+## Plot chemistry data on map
+ 
+### Get chemistry data into R's memory
+
+The data are in an excel file, so we use the command 'read_excel' to read the data into R's memory. Note that   
+
+ + `skip = 2` means that we skip the two first lines of the Excel file (we want the variable names to be in our row number 1)  
+ + `na = "n.d."` means that the cells with no data are marked "n.d.". Otherwise R will think this is some kind of "data".   
+
+To look at the data and which variables are inside:
+ + In RStudio:
+    - Click on the **Environment** button in the top right window
+    - Click on the small blue button to the left of 'data_chem' to see list of variables
+    - Click on the word 'data_chem' to see the data
+ +  In R or RStudio:
+    - Command `head(data_chem)` - shows the first lines of the file
+    - Command `str(data_chem)` - shows a list of the variables
+    - Command `summary(data_chem)` - shows minimum, maximum, mean of the variables
+    - Command `data_chem` - shows all or the top of the file (depending on type of data)
+```{r}
+data_chem <- read_excel("Data/summary of most important chemistry results.xlsx", skip = 2, na = c("","n.d."))
+```
+
+<b>
+
+### Add columns for longitude and latitude to the data
+We use the command `merge()` with specifying `by = c("lake","site")`. This means that we take the first data set (`data_diatoms`) and use the two variables _lake_ and _site_ to add the variables form the second data set (`data_positions`). The part `all.x = TRUE, all.y = FALSE` just means that we we want all the rows in the first data set (the chemistry data), and only the rows in the second data set (positions) that corresponds to the first data set. Thus, as an effect of this command, the variables _Elongitude_ and _Nlatitude_ are added to the `data_diatoms` data.   
+(Note: if you have the _dplyr_ package installed, you can use the command `left_join()` which may be easier - see remark after the # marks below.)
+```{r}
+data_chem <- merge(data_chem, data_positions, by = c("lake","site"), all.x = TRUE, all.y = FALSE)
+
+# With dplyr
+# data_chem <- left_join(data_chem, data_positions, by = c("lake","site"))
+```
+
+
+<b>
+
+### Plot (first try)
+```{r, warning=FALSE}
+mymap + 
+  geom_point(data = data_chem, aes(Elongitude, Nlatitude, color = water_TP_autumn))
+```
+
+
+<b>
+
+### Plot (second try)
+We make the points larger by setting `size = 5` 
+```{r, warning=FALSE}
+mymap + 
+  geom_point(data = data_chem, aes(Elongitude, Nlatitude, color = water_TP_autumn), size = 5)
+```
+
+
+<b>
+
+### Plot (with different color scale)
+We use a better color scale by setting `scale_color_distiller(palette = "RdYlGn")`  
+  + Note: 'data_chem' has data for _all_ lakes, and the colours scale is adapted to that. But because 'mymap' sets the limits of the map we only see the points around this lake - the other lakes are outside the picture.   
+```{r, warning=FALSE}
+mymap + 
+  geom_point(data = data_chem, aes(Elongitude, Nlatitude, color = water_TP_autumn), size = 5) +
+  scale_color_distiller(palette = "RdYlGn")
+```
+
+
+<b>
+
+### Plot (color scale based on this lake only)
+To make the colour scale adjust to only the lake we show, we have to make a new data set (we call it 'data_chem_mylake') for only the data of this lake. 
+```{r, warning=FALSE}
+data_chem_mylake <- subset(data_chem, lake == "Lura")
+mymap + 
+  geom_point(data = data_chem_mylake, aes(Elongitude, Nlatitude, color = water_TP_autumn), size = 5) +
+  scale_color_distiller(palette = "RdYlGn")
+```
+
+
+<b>
+
+### More things we can do to improve our plot
+#### Make points more visible by adding a black border
+We do this by using 'shape = 21'.
+ + Note that we have to change 'color' and 'scale_color_distiller' into 'fill' and 'scale_fill_distiller', because for this shape, 'color' is only the color of the border around the circle.
+```{r, warning=FALSE}
+mymap + 
+  geom_point(data = data_chem_mylake, aes(Elongitude, Nlatitude, fill = water_TP_autumn), shape = 21, size = 5) +
+  scale_fill_distiller(palette = "RdYlGn")
+```
+
+
+<b>
+
+#### Change shape
+Here we change 'shape = 21' to 'shape = 22'. Run the command `?points` to see the different shapes we can use. 
+```{r, warning=FALSE}
+mymap + 
+  geom_point(data = data_chem_mylake, aes(Elongitude, Nlatitude, fill = water_TP_autumn), shape = 22, size = 5) +
+  scale_fill_distiller(palette = "RdYlGn")
+```
+
+<b>
+
+#### Change title of the legend 
+We do this by adding the title just after the first parenthesis in the scale definition `scale_fill_distiller`.  
+Note that `\p` means "line shift", so `Total water P\nAutumn` prints "Total water", line shift,  "Autumn". 
+```{r, warning=FALSE}
+mymap + 
+  geom_point(data = data_chem_mylake, aes(Elongitude, Nlatitude, fill = water_TP_autumn), shape = 22, size = 5) +
+  scale_fill_distiller("Total water P\nAutumn", palette = "RdYlGn")
+```
+
+<b>
+
+#### Add plot title 
+```{r, warning=FALSE}
+mymap + 
+  geom_point(data = data_chem_mylake, aes(Elongitude, Nlatitude, fill = water_TP_autumn), shape = 22, size = 5) +
+  scale_fill_distiller("Total water P\nAutumn", palette = "RdYlGn") + 
+  labs(title = "Lake Lura, total phosphorus")
+```
+
+<br>
+
+#### Show variation using point size 
+ + Added `size = water_TP_autumn` _inside_ the aes() paranthesis
+ + Remember to delete the `size = 5` _outside_ the aes() paranthesis
+ + We can also use size to show a different variable
+```{r, warning=FALSE}
+mymap + 
+  geom_point(data = data_chem_mylake, aes(Elongitude, Nlatitude, fill = water_TP_autumn, size = water_TP_autumn), shape = 22) +
+  scale_fill_distiller("Total water P\nAutumn", palette = "RdYlGn")
+```
+
+<b>
+
+#### Plot a different variable (sediment total P)
+ + Changed `water_TP_autumn` to `sed_TP_autumn`
+ + Remember to also change any titles (here, legend title)
+```{r, warning=FALSE}
+mymap + 
+  geom_point(data = data_chem_mylake, aes(Elongitude, Nlatitude, fill = sed_TP_autumn), shape = 22, size = 5) +
+  scale_fill_distiller("Total sediment P\nAutumn", palette = "RdYlGn")
+```
+
+
+
+## Plot diatom data
+
+### Get diatom data into R's memory
+```{r}
+data_diatoms <- read_excel("Data/summary of the most important diatom results.xlsx", na = c("","n.d."))
+```
+
+<b>
+
+### Add columns for longitude and latitude to the data
+```{r}
+data_diatoms <- merge(data_diatoms, data_positions, by = c("lake","site"), all.x = TRUE, all.y = FALSE)
+```
+
+<b>
+
+### Plot IPS as colours on map
+```{r, warning=FALSE}
+mymap + 
+  geom_point(data = data_diatoms, aes(Elongitude, Nlatitude, color = IPS), size = 5) +
+  scale_color_distiller(palette = "RdYlGn")
+```
+
+## Plot macroinvertebrate data
+
+<b>
+
+### Get macroinvertebrate data into R's memory
+```{r, warning=FALSE}
+data_invert <- read_excel("Data/summary of most important macroinvertebrate data.xlsx", sheet = "indices_traits", skip = 1, na = c("","n.d."))
+```
+
+<b>
+
+### Add columns for longitude and latitude to the data
+```{r}
+data_invert <- merge(data_invert, data_positions, by = c("lake","site"), all.x = TRUE, all.y = FALSE)
+```
+
+<b>
+
+### Plot IPS as colours on map
+```{r, warning=FALSE}
+mymap + 
+  geom_point(data = data_invert, aes(Elongitude, Nlatitude, color = ASPT), size = 5) +
+  scale_color_distiller(palette = "RdYlGn")
+```
+
+## Plot macrophyte data
+
+### Get macrophyte data into R's memory
+```{r}
+data_macrophyte <- read_excel("Data/summary of most important macrophyte results.xlsx", skip = 1, na = c("","n.d."))
+```
+
+<b>
+
+### Add columns for longitude and latitude to the data
+```{r}
+data_macrophyte <- merge(data_macrophyte, data_positions, by = c("lake","site"), all.x = TRUE, all.y = FALSE)
+```
+
+<b>
+
+### Plot IPS as colours on map
+```{r, warning=FALSE}
+mymap + 
+  geom_point(data = data_macrophyte, aes(Elongitude, Nlatitude, color = MI), size = 5) +
+  scale_color_distiller(palette = "RdYlGn")
+```
+
+# Make plot of all lakes
+## Mean position of each lake
+```{r}
+x <- data_positions[,c("Elongitude","Nlatitude")] 
+aggregate(x, list(Lake = data_positions$lake), mean)
+
+#
+# Note; with the package dplyr installed, you can do as follows:
+#
+# data_positions %>%
+#   group_by(lake) %>%
+#   summarise(long = mean(Elongitude), lat = mean(Nlatitude)) %>%
+#   as.data.frame()
+```
+
+<b>
+
+## Create background maps
+```{r, warning = FALSE}
+mymap1 <- qmap(location = c(19.09116, 43.14598), zoom=16)
+mymap2 <- qmap(location = c(19.5983, 42.898), zoom=16)
+mymap3 <- qmap(location = c(20.39183, 44.78354), zoom=14)
+mymap4 <- qmap(location = c(20.19387, 41.78988), zoom=16)
+mymap5 <- qmap(location = c(20.73327, 41.03089), zoom=11)
+mymap6 <- qmap(location = c(20.95873, 40.90712), zoom=11)
+```
+
+<b>
+
+## Create a list of maps and arrange them
+We make a list of maps (`map_list`) and print it using `plot_grid`.
+```{r, fig.width = 8, fig.height = 12, warning=FALSE}
+map_list <- list(mymap1, mymap2, mymap3, mymap4, mymap5, mymap6)
+plot_grid(plotlist = map_list, ncol = 2)
+```
+
+<b>
+
+## Create a list of maps, add points, and arrange them
+We first make a list of 6 maps as before. We then make a loop that goes through the numbers 1 to 6 (represnted by _i_), and for each round in the loop we pick map number _i_ and add the data points just as before.
+```{r, warning=FALSE}
+map_list <- list(mymap1, mymap2, mymap3, mymap4, mymap5, mymap6)
+  
+for (i in 1:6){
+  map_list[[i]] <- map_list[[i]] +
+    geom_point(data = data_chem, aes(Elongitude, Nlatitude, fill = water_TP_autumn), pch = 21, size = 5) +
+    scale_fill_distiller("Total water P\nAutumn", palette = "RdYlGn")
+}
+```
+
+<b>
+
+### Plot this new list of maps
+```{r, fig.width = 8, fig.height = 12, warning=FALSE}
+plot_grid(plotlist = map_list, ncol = 2)
+```
+
+<b>
+
+## Plot only points for the correct lake  
+ + Inside `geom_point`, we replace `data_chem` with `subset(data_chem, lake == lakes[i])`  
+ + Note that in order to keep the same color scale for all plots, we need to add
+    - `total_range <- range...` where we find the minimum/maximum of `water_TP_autumn`and store it in `total_range`
+    - `limits = total_range` inside `scale_fill_distiller`; this sets all color scales to go between the same minimum/maximum  
+```{r, warning=FALSE}
+map_list <- list(mymap1, mymap2, mymap3, mymap4, mymap5, mymap6)
+lakes <- c("Crno","Biogradsko","Sava","Lura","Ohrid","Prespa")
+total_range <- range(data_chem$water_TP_autumn, na.rm = TRUE)
+for (i in 1:6){
+  map_list[[i]] <- map_list[[i]] +
+    geom_point(data = subset(data_chem, lake == lakes[i]), aes(Elongitude, Nlatitude, fill = water_TP_autumn), pch = 21, size = 5) +
+    scale_fill_distiller("Total water P\nAutumn", palette = "RdYlGn", limits = total_range)
+}
+```
+
+<b>
+
+### Plot this new list of maps
+```{r, fig.width = 8, fig.height = 12, warning=FALSE}
+plot_grid(plotlist = map_list, ncol = 2)
+```
+
+<b>
+
+## As the previous plot but include just one common legend for all lakes
+ + Inside `scale_fill_distiller`, include `guide = FALSE` to make plots without legend
+ + For making the legend, we make one extra plot (`plot_with_legend`). This is not plotted, but its legend is plotted (using `get_legend` in the nexat part).
+
+```{r, warning=FALSE}
+# Following the approach in
+# https://stackoverflow.com/a/46848576/1734247
+map_list <- list(mymap1, mymap2, mymap3, mymap4, mymap5, mymap6)
+lakes <- c("Crno","Biogradsko","Sava","Lura","Ohrid","Prespa")
+total_range <- range(data_chem$water_TP_autumn, na.rm = TRUE)
+for (i in 1:6){
+  map_list[[i]] <- map_list[[i]] +
+    geom_point(data = subset(data_chem, lake == lakes[i]), aes(Elongitude, Nlatitude, fill = water_TP_autumn), pch = 21, size = 5) +
+    scale_fill_distiller(palette = "RdYlGn", limits = total_range, guide = FALSE)
+    }
+
+# To be used just for "picking out" the legend using get_legend
+plot_with_legend <-  ggplot() +
+  geom_point(data = subset(data_chem, lake == lakes[1]), aes(Elongitude, Nlatitude, fill = water_TP_autumn), pch = 21, size = 5) +
+  scale_fill_distiller("Total water P Autumn", palette = "RdYlGn", limits = total_range) +
+  theme(legend.position = "bottom", legend.key.width = unit(2, "cm"))
+```
+
+
+<b>
+
+### Plot this new list of maps
+```{r, fig.width = 8, fig.height = 12, warning=FALSE}
+plot_grid(
+  plot_grid(plotlist = map_list, ncol = 2, labels = lakes, label_x = 0.1, hjust = 0),
+  get_legend(plot_with_legend + scale_shape(guide = FALSE) + theme(legend.position = "bottom")),
+   ncol=1, rel_heights=c(.85, .15)
+  )
+```
+
+
+## Add and plot index / categorization of a variable
+### Make index variable based on `water_TP_autumn`, let us call it `water_TP_autumn_index`.  
+- As an example we here define 
+    + 3 categories (low, medium, high)  
+    + Threshold values are 15 and 25
+-  WHen you change this, remember that **number of colors = number of categories** but **number of threshold values = number of categories + 1**.
+```{r}
+my_categories <- c("Low autumn P", "Medium autumn P", "High autumn P")
+my_colors <- c("green","orange","red")
+names(my_colors) <- my_categories   # this provides the 'link' between categories and colors
+
+data_chem$water_TP_autumn_index <- cut(data_chem$water_TP_autumn, 
+                        c(0, 15, 25, 100),
+                        labels = my_categories)
+```
+
+<b>
+
+### Define plots  
+Similar to the version with continuous colors, excep
+- We change `water_TP_autumn`to `water_TP_autumn_index`
+- We use `scale_fill_manual` with colors to be `my_colors` as we defined above
+- When we define the scale in `plot_with _legend`, we replace `limits = total_range` with `drop = TRUE` (this ensures that all categories are shown in the legend)  
+```{r, warning=FALSE}
+# Followind the approach in
+# https://stackoverflow.com/a/46848576/1734247
+map_list <- list(mymap1, mymap2, mymap3, mymap4, mymap5, mymap6)
+lakes <- c("Crno","Biogradsko","Sava","Lura","Ohrid","Prespa")
+for (i in 1:6){
+  label_x <- min(subset(data_chem, lake == lakes[i])$Elongitude)
+  label_y <- max(subset(data_chem, lake == lakes[i])$Nlatitude)
+  map_list[[i]] <- map_list[[i]] +
+    geom_point(data = subset(data_chem, lake == lakes[i]), aes(Elongitude, Nlatitude, fill = water_TP_autumn_index), pch = 21, size = 5) +
+    scale_fill_manual(values = my_colors, guide = FALSE)
+    }
+
+# To be used just for "picking out" the legend using get_legend
+plot_with_legend <-  ggplot() +
+  geom_point(data = subset(data_chem, lake == lakes[1]), aes(Elongitude, Nlatitude, fill = water_TP_autumn_index), pch = 21, size = 5) +
+  scale_fill_manual("Total water P Autumn", values = my_colors, drop = FALSE) +
+  theme(legend.position = "bottom", legend.key.width = unit(1.2, "cm"))
+```
+
+
+<b>
+
+### Plot this new list of maps
+```{r, fig.width = 8, fig.height = 12, warning=FALSE}
+plot_grid(
+  plot_grid(plotlist = map_list, ncol = 2, labels = lakes, label_x = 0.1, hjust = 0),
+  get_legend(plot_with_legend + scale_shape(guide = FALSE) + theme(legend.position = "bottom")),
+   ncol=1, rel_heights=c(.85, .15)
+  )
+```
+
+# Define functions for plotting all lakes
+
+```{r}
+plot_lakes_continuous <- function(dataset, variable, legend_title = NULL, 
+                                      palette = "RdYlGn", reverse_colors = FALSE){
+  dataset$variable_plot <- dataset[,variable]
+  total_range <- range(dataset$variable_plot, na.rm = TRUE)
+  if (is.null(legend_title))
+    legend_title = variable
+  map_list <- list(mymap1, mymap2, mymap3, mymap4, mymap5, mymap6)
+  lakes <- c("Crno","Biogradsko","Sava","Lura","Ohrid","Prespa")
+  for (i in 1:6){
+    label_x <- min(subset(dataset, lake == lakes[i])$Elongitude)
+    label_y <- max(subset(dataset, lake == lakes[i])$Nlatitude)
+    map_list[[i]] <- map_list[[i]] +
+      geom_point(data = subset(dataset, lake == lakes[i]), 
+                 aes(Elongitude, Nlatitude, fill = variable_plot), 
+                 pch = 21, size = 5) +
+      scale_fill_distiller(palette = palette, limits = total_range, guide = FALSE, 
+                           direction = ifelse(reverse_colors,-1,1))
+  }
+  
+  plot_with_legend <-  ggplot() +
+    geom_point(data = subset(dataset, lake == lakes[2]), 
+               aes(Elongitude, Nlatitude, fill = variable_plot), 
+               pch = 21, size = 5) +
+    scale_fill_distiller(legend_title, palette = palette, limits = total_range, 
+                         direction = ifelse(reverse_colors,-1,1)) +
+    theme(legend.position = "bottom", legend.key.width = unit(2, "cm"))
+  
+  plot_grid(
+    plot_grid(plotlist = map_list, ncol = 2, labels = lakes, label_x = 0.1, hjust = 0),
+    get_legend(plot_with_legend + scale_shape(guide = FALSE) + theme(legend.position = "bottom")),
+    ncol=1, rel_heights=c(.85, .15)
+  )
+}
+
+plot_lakes_categories <- function(dataset, variable, legend_title = NULL, colors){
+  dataset$variable_plot <- dataset[,variable]
+  if (is.null(legend_title))
+    legend_title = variable
+  my_categories <- levels(dataset[,variable])
+  if (length(my_colors) != length(colors))
+    stop("Number of colors does not equal the number of categories")
+  names(colors) <- levels(dataset[,variable]) 
+  map_list <- list(mymap1, mymap2, mymap3, mymap4, mymap5, mymap6)
+  lakes <- c("Crno","Biogradsko","Sava","Lura","Ohrid","Prespa")
+  for (i in 1:6){
+    label_x <- min(subset(dataset, lake == lakes[i])$Elongitude)
+    label_y <- max(subset(dataset, lake == lakes[i])$Nlatitude)
+    map_list[[i]] <- map_list[[i]] +
+      geom_point(data = subset(dataset, lake == lakes[i]), 
+                 aes(Elongitude, Nlatitude, fill = variable_plot), 
+                 pch = 21, size = 5) +
+      scale_fill_manual(values = colors, guide = FALSE)
+  }
+  
+  plot_with_legend <-  ggplot() +
+    geom_point(data = subset(dataset, lake == lakes[2]), 
+               aes(Elongitude, Nlatitude, fill = variable_plot), 
+               pch = 21, size = 5) +
+    scale_fill_manual(legend_title, values = colors, drop = FALSE) +
+    theme(legend.position = "bottom", legend.key.width = unit(1.2, "cm"))
+  
+  plot_grid(
+    plot_grid(plotlist = map_list, ncol = 2, labels = lakes, label_x = 0.1, hjust = 0),
+    get_legend(plot_with_legend + scale_shape(guide = FALSE) + theme(legend.position = "bottom")),
+    ncol=1, rel_heights=c(.85, .15)
+  )
+}
+
+```
+
+## Examples of use
+### Example 1: plotting a continuous variable
+```{r, fig.width = 8, fig.height = 12, warning=FALSE}
+# debugonce(plot_lakes_continuous)
+plot_lakes_continuous(data_invert, "ASPT", "ASPT value")
+# plot_lakes_continuous(data_invert, "ASPT", "ASPT value", reverse_colors = TRUE)
+```
+
+### Example 2: making and plotting a categorical variable
+```{r, fig.width = 8, fig.height = 12, warning=FALSE}
+data_invert$ASPT_categories <- cut(data_invert$ASPT, breaks = c(0,3,5,100), labels = c("Low","Median","High"))
+
+plot_lakes_categories(data_invert, "ASPT_categories", "ASPT", c("red","orange","green"))
+```
+
